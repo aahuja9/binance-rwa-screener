@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binance RWA Perps Screener</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>RWA Perps Screener</h1>
+      <span class="sub">Binance TradFi perpetuals &mdash; volume &amp; open-interest momentum</span>
+    </div>
+    <div class="top-actions">
+      <span id="lastUpdated" class="updated"></span>
+      <label class="toggle"><input type="checkbox" id="autoRefresh"> Auto-refresh 5m</label>
+      <button id="refreshBtn" class="btn">Refresh</button>
+    </div>
+  </header>
+
+  <div id="progressWrap" class="progress-wrap" hidden>
+    <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+    <span id="progressText" class="progress-text"></span>
+  </div>
+
+  <div id="errorBox" class="error-box" hidden></div>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="controls">
+    <div class="chip-group" id="catChips" aria-label="Category filter"></div>
+    <div class="chip-group" id="quadChips" aria-label="Signal filter"></div>
+    <div class="control-inputs">
+      <label>Min 24h vol <input type="text" id="minVol" placeholder="e.g. 1M" size="7"></label>
+      <input type="search" id="search" placeholder="Search symbol...">
+    </div>
+  </section>
+
+  <section class="table-wrap">
+    <table id="grid">
+      <thead><tr id="headRow"></tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+  </section>
+
+  <footer class="foot">
+    <p id="weekendNote" class="note" hidden>Note: the previous 24h window overlaps a weekend. Underlying stock markets were closed, so volume-change numbers are inflated for equities. Open-interest change is unaffected.</p>
+    <p class="note">Vol windows: last 24 closed hourly candles vs the 24 before. OI from hourly openInterest history (notional USDT). Vol/OI = 24h volume divided by current OI (turnover). Signal quadrants: <strong>New Money</strong> = vol up + OI up, <strong>Churn</strong> = vol up + OI down, <strong>Accumulation</strong> = vol down + OI up, <strong>Cooling</strong> = both down.</p>
+    <details class="proxy-details">
+      <summary>Connection settings</summary>
+      <p class="note">Data is fetched directly from fapi.binance.com in your browser. If requests fail (HTTP 451 geo-block or CORS), set a proxy prefix. The full Binance URL is appended, URL-encoded, to the prefix.</p>
+      <label>Proxy prefix <input type="text" id="proxyPrefix" placeholder="https://corsproxy.io/?url=" size="40"></label>
+      <button id="saveProxy" class="btn btn-small">Save &amp; reload</button>
+    </details>
+    <p class="note">Not financial advice. Data: Binance public API, no key required. <a href="https://github.com/aahuja9/binance-rwa-screener">Source</a></p>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
