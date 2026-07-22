@@ -11,14 +11,10 @@ For every live `TRADIFI_PERPETUAL` contract on Binance USDT-M futures:
 - **Vol 24h / Vol prev / Vol chg** — quote volume over the last 24 closed hourly candles vs the 24 before.
 - **OI / OI 24h / OI 4h** — current open interest notional and its change vs 24h and 4h ago, from Binance's hourly `openInterestHist` archive. A 48h OI sparkline per row.
 - **Vol/OI turnover** — 24h volume divided by current OI. High values (10x+) mean day-trading churn; low values mean sticky positions.
-- **Signal quadrant** — the vol-change x OI-change read:
-  - **New Money**: vol up + OI up — positions building, backed by activity
-  - **Churn**: vol up + OI down — busy tape but positions closing
-  - **Accumulation**: vol down + OI up — quiet position building
-  - **Cooling**: both down
+- **Div** — whether the underlying pays a dividend, with hover detail and a click-through to its dividend history. Curated static data in `dividends.js`; `?` marks Binance alias tickers whose underlying is unconfirmed. Note that perp holders never receive dividends — Binance neutralizes them via index price adjustment on ex-dividend dates.
 - **Score** — percentile rank of vol change and OI change, averaged (0-100).
 
-Filters: category (US/HK/KR equities, pre-IPO, commodities), signal quadrant, minimum volume, symbol search. Sortable columns, optional 5-minute auto-refresh.
+Filters: category (US/HK/KR equities, pre-IPO, commodities), minimum volume, symbol search. Sortable columns, optional 5-minute auto-refresh.
 
 ## Caveats
 

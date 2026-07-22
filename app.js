@@ -9,19 +9,11 @@ const CATS = {
   PREMARKET: "Pre-IPO",
   COMMODITY: "Cmdty",
 };
-const QUADS = {
-  newmoney: { label: "New Money", cls: "newmoney", icon: "▲▲" },
-  churn: { label: "Churn", cls: "churn", icon: "▲▼" },
-  accum: { label: "Accumulation", cls: "accum", icon: "▼▲" },
-  cooling: { label: "Cooling", cls: "cooling", icon: "▼▼" },
-};
-
 const state = {
   rows: [],
   sortKey: "oiChg24",
   sortDir: -1,
   cats: new Set(["EQUITY", "HK_EQUITY", "KR_EQUITY", "PREMARKET"]),
-  quads: new Set(Object.keys(QUADS)),
   minVol: 0,
   search: "",
   timer: null,
@@ -91,10 +83,6 @@ async function loadSymbol(meta) {
   }
 
   const volChg = volPrev ? (volNow / volPrev - 1) * 100 : null;
-  let quad = null;
-  if (volChg != null && oiChg24 != null) {
-    quad = volChg >= 0 ? (oiChg24 >= 0 ? "newmoney" : "churn") : (oiChg24 >= 0 ? "accum" : "cooling");
-  }
   const divi = dividendInfo(meta.baseAsset, meta.underlyingType);
   return {
     symbol: sym, cat: meta.underlyingType, price,
@@ -102,7 +90,7 @@ async function loadSymbol(meta) {
     priceChg: price24 ? (price / price24 - 1) * 100 : null,
     volNow, volPrev, volChg, oiNow, oiChg24, oiChg4,
     turnover: oiNow ? volNow / oiNow : null,
-    oiSeries, quad, score: 0,
+    oiSeries, score: 0,
   };
 }
 
@@ -181,7 +169,6 @@ const COLS = [
   { key: "turnover", label: "Vol/OI" },
   { key: "oiSeries", label: "OI 48h", sortable: false },
   { key: "div", label: "Div", left: true },
-  { key: "quad", label: "Signal", left: true },
   { key: "score", label: "Score" },
 ];
 
@@ -195,8 +182,7 @@ function renderHead() {
 function visibleRows() {
   const q = state.search.trim().toUpperCase();
   let rows = state.rows.filter(
-    (r) => state.cats.has(r.cat) && (r.quad == null || state.quads.has(r.quad)) &&
-      r.volNow >= state.minVol && (!q || r.symbol.includes(q))
+    (r) => state.cats.has(r.cat) && r.volNow >= state.minVol && (!q || r.symbol.includes(q))
   );
   const k = state.sortKey, dir = state.sortDir;
   rows.sort((a, b) => {
@@ -212,12 +198,12 @@ function visibleRows() {
 function renderTiles(rows) {
   const totVol = rows.reduce((a, r) => a + r.volNow, 0);
   const totOi = rows.reduce((a, r) => a + (r.oiNow || 0), 0);
-  const gaining = rows.filter((r) => r.quad === "newmoney");
+  const oiUp = rows.filter((r) => r.oiChg24 != null && r.oiChg24 > 0);
   const topOi = rows.filter((r) => r.oiChg24 != null).sort((a, b) => b.oiChg24 - a.oiChg24)[0];
   $("tiles").innerHTML = [
     { k: "24h volume (filtered)", v: "$" + fmtUsd(totVol), d: `${rows.length} pairs` },
     { k: "Open interest", v: "$" + fmtUsd(totOi), d: "notional" },
-    { k: "New Money pairs", v: String(gaining.length), d: "vol up + OI up" },
+    { k: "OI rising", v: String(oiUp.length), d: "pairs with OI up vs 24h ago" },
     topOi
       ? { k: "Top OI gainer", v: topOi.symbol.replace(/USDT$|USD1$/, ""), d: `${fmtPct(topOi.oiChg24)} OI, ${fmtPct(topOi.volChg, 0)} vol` }
       : { k: "Top OI gainer", v: "–", d: "" },
@@ -229,7 +215,6 @@ function render() {
   const rows = visibleRows();
   renderTiles(rows);
   $("body").innerHTML = rows.map((r) => {
-    const q = r.quad ? QUADS[r.quad] : null;
     return `<tr>
       <td class="l sym">${r.symbol}</td>
       <td class="l cat">${CATS[r.cat] || r.cat}</td>
@@ -248,7 +233,6 @@ function render() {
           ? '<span class="dim">–</span>'
           : `<a class="divlink" href="${r.divUrl}" target="_blank" rel="noopener" title="${r.divNote.replace(/"/g, "&quot;")}"><span class="badge div-${r.div === "Y" ? "y" : r.div === "N" ? "n" : "u"}">${r.div === "Y" ? "Yes" : r.div === "N" ? "No" : "?"}</span></a>`
       }</td>
-      <td class="l">${q ? `<span class="badge ${q.cls}">${q.icon} ${q.label}</span>` : "–"}</td>
       <td>${r.score}</td>
     </tr>`;
   }).join("");
@@ -257,9 +241,6 @@ function render() {
 function renderChips() {
   $("catChips").innerHTML = Object.entries(CATS).map(
     ([k, v]) => `<button class="chip ${state.cats.has(k) ? "active" : ""}" data-cat="${k}">${v}</button>`
-  ).join("");
-  $("quadChips").innerHTML = Object.entries(QUADS).map(
-    ([k, v]) => `<button class="chip ${state.quads.has(k) ? "active" : ""}" data-quad="${k}">${v.icon} ${v.label}</button>`
   ).join("");
 }
 
@@ -284,13 +265,6 @@ function wire() {
     if (!b) return;
     const c = b.dataset.cat;
     state.cats.has(c) ? state.cats.delete(c) : state.cats.add(c);
-    renderChips(); render();
-  });
-  $("quadChips").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-quad]");
-    if (!b) return;
-    const q = b.dataset.quad;
-    state.quads.has(q) ? state.quads.delete(q) : state.quads.add(q);
     renderChips(); render();
   });
   $("minVol").addEventListener("input", (e) => { state.minVol = parseVol(e.target.value); render(); });

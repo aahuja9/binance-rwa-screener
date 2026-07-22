@@ -132,11 +132,6 @@ tbody tr:last-child td { border-bottom: none; }
   border-radius: 4px; padding: 2px 7px; border: 1px solid var(--border);
   color: var(--text-secondary); background: transparent;
 }
-.badge.newmoney { border-color: var(--status-good); color: var(--delta-up); }
-.badge.churn { border-color: var(--status-warning); }
-.badge.accum { border-color: var(--series-1); color: var(--series-1); }
-.badge.cooling { color: var(--muted); }
-
 .divlink { text-decoration: none; }
 .divlink:hover .badge { background: var(--row-hover); }
 .badge.div-y { border-color: var(--status-good); color: var(--delta-up); }
