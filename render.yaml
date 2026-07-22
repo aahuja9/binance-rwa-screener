@@ -1,17 +1,15 @@
 services:
   - type: web
     name: binance-rwa-screener
-    runtime: static
-    buildCommand: ""
-    staticPublishPath: .
-    pullRequestPreviewsEnabled: false
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*.js
-        name: Cache-Control
-        value: public, max-age=300
-      - path: /index.html
-        name: Cache-Control
-        value: no-cache
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: POLL_SECONDS
+        value: "300"
+      - key: CONCURRENCY
+        value: "6"

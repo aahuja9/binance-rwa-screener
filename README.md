@@ -23,22 +23,47 @@ Filters: category (US/HK/KR equities, pre-IPO, commodities), minimum volume, sym
 - On Mondays (and weekends) the volume-change column is inflated for equities: the comparison window is the weekend, when underlying markets were closed. The app shows a banner when this applies. OI change is unaffected.
 - All data is fetched from `fapi.binance.com` directly in your browser — no server, no API key. If your region is geo-blocked by Binance (HTTP 451) or CORS fails, set a proxy prefix under Connection settings.
 
-## Deploying
+## Architecture
 
-It is a static site with no build step and no server. On Render, create a **Static Site** (not a Web Service): leave Build Command blank and set Publish Directory to `.`. There is no start command. `render.yaml` in this repo configures that automatically if you deploy via Blueprint.
+Two modes, one codebase:
 
-Any static host works the same way — GitHub Pages, Netlify, Cloudflare Pages, S3.
+**Server mode (preferred).** `server.js` polls Binance every 5 minutes, caches the snapshot in memory, and serves it at `/api/data` alongside the static frontend. Page loads are instant — one small JSON read instead of 260+ Binance calls per visitor — and every viewer shares the same poll cycle. Zero npm dependencies (Node 18+ built-ins only).
 
-Note that the host never contacts Binance: all API calls happen in the visitor's browser, so hosting region does not affect Binance's geo-blocking.
+**Static mode (fallback).** If `/api/data` is unreachable, the frontend fetches Binance directly from the browser, exactly as before. This is what the GitHub Pages copy does. The timestamp in the header shows which mode is active: `(server)` or `(browser)`.
+
+Dividend annotation and score computation always happen client-side, so the backend stays purely market-data.
+
+### Endpoints
+
+- `GET /api/data` — cached snapshot: `{rows, updatedAt, count, stale}`
+- `GET /api/health` — poll diagnostics: pair count, last error, poll duration, consecutive failures
+
+## Deploying to Render
+
+`render.yaml` provisions a Node web service in the **Singapore** region. Deploy via Blueprint (New → Blueprint, point at this repo) and it configures itself:
+
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Health Check Path: `/api/health`
+
+Region matters: Binance rejects requests that do not look like a browser (HTTP 451), and access varies by region. The server sends browser-like headers, and Singapore is well-placed for Binance's infrastructure. Tune `POLL_SECONDS` (default 300) and `CONCURRENCY` (default 6) via environment variables.
+
+On Render's free tier the instance sleeps after inactivity, which stops the poller and adds a cold start; `plan: starter` in the blueprint keeps it always-on.
 
 ## Run locally
 
-Any static server works:
+With the backend (recommended — mirrors production):
+
+```
+npm start
+```
+
+Then open http://localhost:3000. Set `PORT` if 3000 is taken.
+
+Static-only, no backend:
 
 ```
 python3 -m http.server 8000
 ```
-
-Then open http://localhost:8000.
 
 Not financial advice.

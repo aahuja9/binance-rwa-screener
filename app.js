@@ -83,14 +83,12 @@ async function loadSymbol(meta) {
   }
 
   const volChg = volPrev ? (volNow / volPrev - 1) * 100 : null;
-  const divi = dividendInfo(meta.baseAsset, meta.underlyingType);
   return {
-    symbol: sym, cat: meta.underlyingType, price,
-    div: divi ? divi.d : null, divNote: divi ? divi.note : "", divUrl: divi ? divi.url : "",
+    symbol: sym, baseAsset: meta.baseAsset, cat: meta.underlyingType, price,
     priceChg: price24 ? (price / price24 - 1) * 100 : null,
     volNow, volPrev, volChg, oiNow, oiChg24, oiChg4,
     turnover: oiNow ? volNow / oiNow : null,
-    oiSeries, score: 0, scoreVol: 0, scoreOi: 0,
+    oiSeries,
   };
 }
 
@@ -108,11 +106,52 @@ function computeScores(rows) {
   }
 }
 
+// Preferred path: the backend (Render, Singapore) polls Binance and serves a
+// cached snapshot. Falls back to fetching Binance directly from the browser so
+// the static-only deployment keeps working.
+async function loadFromBackend() {
+  const res = await fetch("api/data", { cache: "no-store" });
+  if (!res.ok) throw new Error(`backend HTTP ${res.status}`);
+  const json = await res.json();
+  if (!json.rows || !json.rows.length) throw new Error("backend returned no rows");
+  return json;
+}
+
+function annotate(rows) {
+  for (const r of rows) {
+    const divi = dividendInfo(r.baseAsset || r.symbol.replace(/USDT$/, ""), r.cat);
+    r.div = divi ? divi.d : null;
+    r.divNote = divi ? divi.note : "";
+    r.divUrl = divi ? divi.url : "";
+  }
+  computeScores(rows);
+  return rows;
+}
+
+function finish(rows, updatedAt, source) {
+  state.rows = rows;
+  state.source = source;
+  const when = updatedAt ? new Date(updatedAt) : new Date();
+  $("lastUpdated").textContent =
+    `Updated ${when.toLocaleTimeString()} ${source === "backend" ? "(server)" : "(browser)"}`;
+  const day = new Date().getUTCDay();
+  $("weekendNote").hidden = !(day === 0 || day === 1 || day === 6);
+  render();
+}
+
 async function refresh() {
   const btn = $("refreshBtn");
   btn.disabled = true;
-  $("progressWrap").hidden = false;
   $("errorBox").hidden = true;
+  try {
+    const json = await loadFromBackend();
+    finish(annotate(json.rows), json.updatedAt, "backend");
+    btn.disabled = false;
+    return;
+  } catch (e) {
+    console.info("backend unavailable, fetching Binance directly:", e.message);
+  }
+  $("progressWrap").hidden = false;
   try {
     const info = await fetchJson("/fapi/v1/exchangeInfo");
     const metas = info.symbols.filter(
@@ -121,12 +160,7 @@ async function refresh() {
     );
     const rows = (await mapLimit(metas, CONCURRENCY, loadSymbol)).filter(Boolean);
     if (!rows.length) throw new Error("no data returned");
-    computeScores(rows);
-    state.rows = rows;
-    $("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
-    const day = new Date().getUTCDay();
-    $("weekendNote").hidden = !(day === 0 || day === 1 || day === 6);
-    render();
+    finish(annotate(rows), null, "browser");
   } catch (e) {
     const box = $("errorBox");
     box.hidden = false;
@@ -284,7 +318,12 @@ function wire() {
   $("search").addEventListener("input", (e) => { state.search = e.target.value; render(); });
   $("autoRefresh").addEventListener("change", (e) => {
     clearInterval(state.timer);
-    if (e.target.checked) state.timer = setInterval(refresh, 5 * 60 * 1000);
+    if (e.target.checked) {
+      // When the backend is serving, poll it often - it is a cached read, not
+      // 260+ Binance calls - so the page tracks the server's own poll cycle.
+      const ms = state.source === "backend" ? 60 * 1000 : 5 * 60 * 1000;
+      state.timer = setInterval(refresh, ms);
+    }
   });
   $("proxyPrefix").value = localStorage.getItem("proxyPrefix") || "";
   $("saveProxy").addEventListener("click", () => {
