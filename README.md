@@ -23,6 +23,14 @@ Filters: category (US/HK/KR equities, pre-IPO, commodities), minimum volume, sym
 - On Mondays (and weekends) the volume-change column is inflated for equities: the comparison window is the weekend, when underlying markets were closed. The app shows a banner when this applies. OI change is unaffected.
 - All data is fetched from `fapi.binance.com` directly in your browser — no server, no API key. If your region is geo-blocked by Binance (HTTP 451) or CORS fails, set a proxy prefix under Connection settings.
 
+## Deploying
+
+It is a static site with no build step and no server. On Render, create a **Static Site** (not a Web Service): leave Build Command blank and set Publish Directory to `.`. There is no start command. `render.yaml` in this repo configures that automatically if you deploy via Blueprint.
+
+Any static host works the same way — GitHub Pages, Netlify, Cloudflare Pages, S3.
+
+Note that the host never contacts Binance: all API calls happen in the visitor's browser, so hosting region does not affect Binance's geo-blocking.
+
 ## Run locally
 
 Any static server works:
