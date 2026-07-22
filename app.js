@@ -95,8 +95,10 @@ async function loadSymbol(meta) {
   if (volChg != null && oiChg24 != null) {
     quad = volChg >= 0 ? (oiChg24 >= 0 ? "newmoney" : "churn") : (oiChg24 >= 0 ? "accum" : "cooling");
   }
+  const divi = dividendInfo(meta.baseAsset, meta.underlyingType);
   return {
     symbol: sym, cat: meta.underlyingType, price,
+    div: divi ? divi.d : null, divNote: divi ? divi.note : "", divUrl: divi ? divi.url : "",
     priceChg: price24 ? (price / price24 - 1) * 100 : null,
     volNow, volPrev, volChg, oiNow, oiChg24, oiChg4,
     turnover: oiNow ? volNow / oiNow : null,
@@ -169,7 +171,7 @@ const COLS = [
   { key: "symbol", label: "Symbol", left: true },
   { key: "cat", label: "Cat", left: true },
   { key: "price", label: "Last" },
-  { key: "priceChg", label: "Px 24h" },
+  { key: "priceChg", label: "Price 24h" },
   { key: "volNow", label: "Vol 24h" },
   { key: "volPrev", label: "Vol prev" },
   { key: "volChg", label: "Vol chg" },
@@ -178,6 +180,7 @@ const COLS = [
   { key: "oiChg4", label: "OI 4h" },
   { key: "turnover", label: "Vol/OI" },
   { key: "oiSeries", label: "OI 48h", sortable: false },
+  { key: "div", label: "Div", left: true },
   { key: "quad", label: "Signal", left: true },
   { key: "score", label: "Score" },
 ];
@@ -240,6 +243,11 @@ function render() {
       <td class="${pctCls(r.oiChg4)}">${fmtPct(r.oiChg4)}</td>
       <td>${r.turnover == null ? "–" : r.turnover.toFixed(2) + "x"}</td>
       <td>${spark(r.oiSeries)}</td>
+      <td class="l">${
+        r.div == null
+          ? '<span class="dim">–</span>'
+          : `<a class="divlink" href="${r.divUrl}" target="_blank" rel="noopener" title="${r.divNote.replace(/"/g, "&quot;")}"><span class="badge div-${r.div === "Y" ? "y" : r.div === "N" ? "n" : "u"}">${r.div === "Y" ? "Yes" : r.div === "N" ? "No" : "?"}</span></a>`
+      }</td>
       <td class="l">${q ? `<span class="badge ${q.cls}">${q.icon} ${q.label}</span>` : "–"}</td>
       <td>${r.score}</td>
     </tr>`;

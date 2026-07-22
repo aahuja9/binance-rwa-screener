@@ -137,6 +137,12 @@ tbody tr:last-child td { border-bottom: none; }
 .badge.accum { border-color: var(--series-1); color: var(--series-1); }
 .badge.cooling { color: var(--muted); }
 
+.divlink { text-decoration: none; }
+.divlink:hover .badge { background: var(--row-hover); }
+.badge.div-y { border-color: var(--status-good); color: var(--delta-up); }
+.badge.div-n { color: var(--muted); }
+.badge.div-u { border-style: dashed; color: var(--muted); }
+
 .spark { vertical-align: middle; }
 .spark path { stroke: var(--series-1); stroke-width: 2; fill: none; }
 

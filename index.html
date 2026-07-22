@@ -47,7 +47,7 @@
 
   <footer class="foot">
     <p id="weekendNote" class="note" hidden>Note: the previous 24h window overlaps a weekend. Underlying stock markets were closed, so volume-change numbers are inflated for equities. Open-interest change is unaffected.</p>
-    <p class="note">Vol windows: last 24 closed hourly candles vs the 24 before. OI from hourly openInterest history (notional USDT). Vol/OI = 24h volume divided by current OI (turnover). Signal quadrants: <strong>New Money</strong> = vol up + OI up, <strong>Churn</strong> = vol up + OI down, <strong>Accumulation</strong> = vol down + OI up, <strong>Cooling</strong> = both down.</p>
+    <p class="note">Vol windows: last 24 closed hourly candles vs the 24 before. OI from hourly openInterest history (notional USDT). Vol/OI = 24h volume divided by current OI (turnover). Signal quadrants: <strong>New Money</strong> = vol up + OI up, <strong>Churn</strong> = vol up + OI down, <strong>Accumulation</strong> = vol down + OI up, <strong>Cooling</strong> = both down. <strong>Div</strong> = whether the underlying pays a dividend (curated static data, hover for details, click for history; "?" = Binance alias ticker, unverified). Perp holders never receive dividends; Binance neutralizes them via index price adjustment on ex-div dates.</p>
     <details class="proxy-details">
       <summary>Connection settings</summary>
       <p class="note">Data is fetched directly from fapi.binance.com in your browser. If requests fail (HTTP 451 geo-block or CORS), set a proxy prefix. The full Binance URL is appended, URL-encoded, to the prefix.</p>
@@ -57,6 +57,7 @@
     <p class="note">Not financial advice. Data: Binance public API, no key required. <a href="https://github.com/aahuja9/binance-rwa-screener">Source</a></p>
   </footer>
 </div>
+<script src="dividends.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
