@@ -90,7 +90,7 @@ async function loadSymbol(meta) {
     priceChg: price24 ? (price / price24 - 1) * 100 : null,
     volNow, volPrev, volChg, oiNow, oiChg24, oiChg4,
     turnover: oiNow ? volNow / oiNow : null,
-    oiSeries, score: 0,
+    oiSeries, score: 0, scoreVol: 0, scoreOi: 0,
   };
 }
 
@@ -101,7 +101,11 @@ function computeScores(rows) {
     return (r) => pos.get(r.symbol) ?? 0.5;
   };
   const rv = ranked("volChg"), ro = ranked("oiChg24");
-  for (const r of rows) r.score = Math.round((0.5 * rv(r) + 0.5 * ro(r)) * 100);
+  for (const r of rows) {
+    r.scoreVol = Math.round(rv(r) * 100);
+    r.scoreOi = Math.round(ro(r) * 100);
+    r.score = Math.round((0.5 * rv(r) + 0.5 * ro(r)) * 100);
+  }
 }
 
 async function refresh() {
@@ -112,7 +116,8 @@ async function refresh() {
   try {
     const info = await fetchJson("/fapi/v1/exchangeInfo");
     const metas = info.symbols.filter(
-      (s) => s.contractType === "TRADIFI_PERPETUAL" && s.status === "TRADING" && CATS[s.underlyingType]
+      (s) => s.contractType === "TRADIFI_PERPETUAL" && s.status === "TRADING" &&
+        CATS[s.underlyingType] && s.quoteAsset === "USDT"
     );
     const rows = (await mapLimit(metas, CONCURRENCY, loadSymbol)).filter(Boolean);
     if (!rows.length) throw new Error("no data returned");
@@ -169,13 +174,21 @@ const COLS = [
   { key: "turnover", label: "Vol/OI" },
   { key: "oiSeries", label: "OI 48h", sortable: false },
   { key: "div", label: "Div", left: true },
-  { key: "score", label: "Score" },
+  {
+    key: "score", label: "Score",
+    title: "Momentum score, 0-100. Each pair is ranked by 24h volume change and by 24h OI change; " +
+      "each rank becomes a percentile (0 = lowest in the current set, 100 = highest), and the two are averaged 50/50. " +
+      "It is relative to the pairs currently loaded, not an absolute threshold - it shifts as the field shifts. " +
+      "Hover a cell for its two components.",
+  },
 ];
 
 function renderHead() {
   $("headRow").innerHTML = COLS.map((c) => {
     const arrow = state.sortKey === c.key ? `<span class="arrow">${state.sortDir < 0 ? "▼" : "▲"}</span>` : "";
-    return `<th class="${c.left ? "l" : ""}" data-key="${c.key}" data-sortable="${c.sortable !== false}">${c.label}${arrow}</th>`;
+    const tip = c.title ? ` title="${c.title.replace(/"/g, "&quot;")}"` : "";
+    const mark = c.title ? '<span class="info">?</span>' : "";
+    return `<th class="${c.left ? "l" : ""}" data-key="${c.key}" data-sortable="${c.sortable !== false}"${tip}>${c.label}${mark}${arrow}</th>`;
   }).join("");
 }
 
@@ -233,7 +246,7 @@ function render() {
           ? '<span class="dim">–</span>'
           : `<a class="divlink" href="${r.divUrl}" target="_blank" rel="noopener" title="${r.divNote.replace(/"/g, "&quot;")}"><span class="badge div-${r.div === "Y" ? "y" : r.div === "N" ? "n" : "u"}">${r.div === "Y" ? "Yes" : r.div === "N" ? "No" : "?"}</span></a>`
       }</td>
-      <td>${r.score}</td>
+      <td class="score-cell" title="Vol-change percentile ${r.scoreVol} + OI-change percentile ${r.scoreOi}, averaged 50/50 = ${r.score}. Percentile is rank within the pairs currently loaded.">${r.score}</td>
     </tr>`;
   }).join("");
 }
